@@ -1,0 +1,38 @@
+# PowerShell module build output
+Output/
+out/
+build/
+bin/
+Release/
+
+# PowerShellGet / publishing artifacts
+*.nupkg
+*.nuspec
+
+# Logs and transcripts
+*.log
+*.transcript
+PowerShell_transcript*.txt
+
+# Test and coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Local environment and secrets
+.env
+.env.*
+*.secret.ps1
+*.secrets.ps1
+secrets.json
+local.settings.json
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+.DS_Store
