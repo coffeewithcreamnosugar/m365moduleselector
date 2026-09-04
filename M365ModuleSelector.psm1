@@ -685,22 +685,28 @@ function Connect-M365Module {
         Write-Host $Title
 
         $options = [ordered]@{
-            "1" = "Microsoft Graph"
-            "2" = "Exchange Online"
-            "3" = "SharePoint Online"
-            "4" = "Microsoft Teams"
-            "5" = "PnP PowerShell"
-            "6" = "Microsoft Entra"
-            "7" = "Azure"
-            "8" = "Power BI"
-            "9" = "Power Platform"
-            "10" = "Microsoft Graph Beta"
-            "11" = "Purview Compliance"
+            "1" = @{ Name = "Microsoft Graph"; Module = "Microsoft.Graph" }
+            "2" = @{ Name = "Exchange Online"; Module = "ExchangeOnlineManagement" }
+            "3" = @{ Name = "SharePoint Online"; Module = "Microsoft.Online.SharePoint.PowerShell" }
+            "4" = @{ Name = "Microsoft Teams"; Module = "MicrosoftTeams" }
+            "5" = @{ Name = "PnP PowerShell"; Module = "PnP.PowerShell" }
+            "6" = @{ Name = "Microsoft Entra"; Module = "Microsoft.Entra" }
+            "7" = @{ Name = "Azure"; Module = "Az.Accounts" }
+            "8" = @{ Name = "Power BI"; Module = "MicrosoftPowerBIMgmt" }
+            "9" = @{ Name = "Power Platform"; Module = "Microsoft.PowerApps.Administration.PowerShell" }
+            "10" = @{ Name = "Microsoft Graph Beta"; Module = "Microsoft.Graph.Beta" }
+            "11" = @{ Name = "Purview Compliance"; Module = "ExchangeOnlineManagement" }
             "q" = "Quit"
         }
 
         foreach ($option in $options.GetEnumerator()) {
-            Write-Host "$($option.Key). $($option.Value)"
+            if ($option.Value -is [hashtable]) {
+                Write-Host "$($option.Key). $($option.Value.Name) " -NoNewline
+                Write-Host "($($option.Value.Module))" -ForegroundColor DarkYellow
+            }
+            else {
+                Write-Host "$($option.Key). $($option.Value)"
+            }
         }
 
         $selection = Read-Host "Enter your choice (1-11 or q)"
