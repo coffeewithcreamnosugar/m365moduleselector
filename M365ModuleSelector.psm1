@@ -330,10 +330,11 @@ function Connect-ModuleMicrosoftGraph {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Graph"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Graph"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "Microsoft.Graph" -ConnectCommand {
@@ -367,10 +368,11 @@ function Connect-ModuleMicrosoftGraphBeta {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Graph Beta"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Graph Beta"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "Microsoft.Graph.Beta" -ConnectCommand {
@@ -401,10 +403,11 @@ function Connect-ModuleExchangeOnline {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Exchange Online"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Exchange Online"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -ConnectCommand {
@@ -456,10 +459,11 @@ function Connect-ModuleMicrosoftTeams {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Teams"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Teams"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "MicrosoftTeams" -ConnectCommand {
@@ -496,10 +500,11 @@ function Connect-ModulePnP {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "PnP PowerShell"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "PnP PowerShell"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     if (-not $ClientId) {
@@ -543,10 +548,11 @@ function Connect-ModuleEntra {
     )
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Entra"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Entra"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "Microsoft.Entra" -ConnectCommand {
@@ -579,10 +585,11 @@ function Connect-ModuleAzure {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Azure"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Azure"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "Az.Accounts" -ConnectCommand {
@@ -636,10 +643,11 @@ function Connect-ModulePurviewCompliance {
     }
 
     if (-not $AuthenticationMode) {
-        $AuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Purview Compliance"
-        if ($AuthenticationMode -eq $script:BackSelection) {
+        $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Purview Compliance"
+        if ($selectedAuthenticationMode -eq $script:BackSelection) {
             return
         }
+        $AuthenticationMode = $selectedAuthenticationMode
     }
 
     Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -ConnectCommand {
