@@ -31,7 +31,7 @@ Import-Module .\M365ModuleSelector.psd1
 Connect-M365Module
 ```
 
-The menu checks whether the selected module is installed, offers to update it when a newer version is available, imports it, and starts the service connection flow.
+After you select a service, the menu checks whether the module is installed, offers to update it when a newer version is available, imports it, and then starts the service connection prompts.
 
 Submenus and prompts support `b` or `back` to return to the main menu.
 
@@ -96,6 +96,12 @@ You can also pass scopes directly:
 
 ```powershell
 Connect-ModuleMicrosoftGraph -Scopes User.Read.All,Group.Read.All
+```
+
+Some tenant-specific admin scopes, such as `Policy.Read.All`, may require a tenant hint:
+
+```powershell
+Connect-ModuleMicrosoftGraph -TenantId contoso.onmicrosoft.com -Scopes Policy.Read.All,Policy.ReadWrite.ApplicationConfiguration
 ```
 
 ## Notes

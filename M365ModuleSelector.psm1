@@ -110,6 +110,16 @@ function Test-PowerShellVersionForModule {
     return $false
 }
 
+function Test-M365ModuleCloudProviderError {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    return ($Message -match '0x8007016A' -or $Message -match 'cloud file provider is not running')
+}
+
 function Install-OrUpdateModule {
     [CmdletBinding()]
     param (
@@ -159,7 +169,14 @@ function Install-OrUpdateModule {
         return $true
     }
     catch {
-        Write-Error "Could not prepare module '$ModuleName': $($_.Exception.Message)"
+        $errorMessage = $_.Exception.Message
+
+        if (Test-M365ModuleCloudProviderError -Message $errorMessage) {
+            Write-Error "Could not prepare module '$ModuleName': PowerShell found the module in a cloud-backed location, but the files are not available locally. Start OneDrive, mark the module folder as 'Always keep on this device', or reinstall the module into a local PowerShell module path. Original error: $errorMessage"
+            return $false
+        }
+
+        Write-Error "Could not prepare module '$ModuleName': $errorMessage"
         return $false
     }
 }
@@ -171,10 +188,12 @@ function Connect-ModuleService {
         [string]$ModuleName,
 
         [Parameter(Mandatory = $true)]
-        [scriptblock]$ConnectCommand
+        [scriptblock]$ConnectCommand,
+
+        [switch]$SkipModulePreparation
     )
 
-    if (-not (Install-OrUpdateModule -ModuleName $ModuleName)) {
+    if (-not $SkipModulePreparation -and -not (Install-OrUpdateModule -ModuleName $ModuleName)) {
         return
     }
 
@@ -272,7 +291,8 @@ function Read-GraphScopes {
 
     Write-Host "Select Microsoft Graph scopes. Use comma-separated numbers for more than one scope."
     foreach ($scope in $script:CommonGraphScopes.GetEnumerator()) {
-        Write-Host "$($scope.Key). $($scope.Value.Name) - $($scope.Value.Description)"
+        Write-Host "$($scope.Key). $($scope.Value.Name) " -NoNewline
+        Write-Host "- $($scope.Value.Description)" -ForegroundColor DarkGray
     }
     Write-Host "c. Custom scopes"
     Write-Host "b. Back"
@@ -317,14 +337,26 @@ function Connect-ModuleMicrosoftGraph {
     [CmdletBinding()]
     param (
         [string[]]$Scopes,
+        [string]$TenantId,
 
         [ValidateSet("Browser", "DeviceCode")]
         [string]$AuthenticationMode
     )
 
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph")) {
+        return
+    }
+
     if (-not $Scopes) {
         $Scopes = Read-GraphScopes
         if ($Scopes -eq $script:BackSelection) {
+            return
+        }
+    }
+
+    if (-not $TenantId -and ($Scopes | Where-Object { $_ -like "Policy.*" })) {
+        $TenantId = Read-Host -Prompt "Enter tenant ID or domain for policy scopes (leave blank to use default, or b to go back)"
+        if (Test-M365ModuleBackSelection -Selection $TenantId) {
             return
         }
     }
@@ -337,10 +369,14 @@ function Connect-ModuleMicrosoftGraph {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Graph" -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Graph" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             Scopes = $Scopes
             NoWelcome = $true
+        }
+
+        if ($TenantId) {
+            $connectParams.TenantId = $TenantId
         }
 
         if ($AuthenticationMode -eq "DeviceCode") {
@@ -355,14 +391,26 @@ function Connect-ModuleMicrosoftGraphBeta {
     [CmdletBinding()]
     param (
         [string[]]$Scopes,
+        [string]$TenantId,
 
         [ValidateSet("Browser", "DeviceCode")]
         [string]$AuthenticationMode
     )
 
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph.Beta")) {
+        return
+    }
+
     if (-not $Scopes) {
         $Scopes = Read-GraphScopes
         if ($Scopes -eq $script:BackSelection) {
+            return
+        }
+    }
+
+    if (-not $TenantId -and ($Scopes | Where-Object { $_ -like "Policy.*" })) {
+        $TenantId = Read-Host -Prompt "Enter tenant ID or domain for policy scopes (leave blank to use default, or b to go back)"
+        if (Test-M365ModuleBackSelection -Selection $TenantId) {
             return
         }
     }
@@ -375,10 +423,14 @@ function Connect-ModuleMicrosoftGraphBeta {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Graph.Beta" -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Graph.Beta" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             Scopes = $Scopes
             NoWelcome = $true
+        }
+
+        if ($TenantId) {
+            $connectParams.TenantId = $TenantId
         }
 
         if ($AuthenticationMode -eq "DeviceCode") {
@@ -402,6 +454,10 @@ function Connect-ModuleExchangeOnline {
         $UserPrincipalName = $script:DefaultUserPrincipalName
     }
 
+    if (-not (Install-OrUpdateModule -ModuleName "ExchangeOnlineManagement")) {
+        return
+    }
+
     if (-not $AuthenticationMode) {
         $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Exchange Online"
         if ($selectedAuthenticationMode -eq $script:BackSelection) {
@@ -410,7 +466,7 @@ function Connect-ModuleExchangeOnline {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -ConnectCommand {
+    Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             ShowBanner = $false
         }
@@ -433,6 +489,10 @@ function Connect-ModuleSharePointOnline {
         [string]$AdminUrl
     )
 
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Online.SharePoint.PowerShell")) {
+        return
+    }
+
     if (-not $AdminUrl) {
         $AdminUrl = Read-Host -Prompt "Enter SharePoint admin URL (https://tenant-admin.sharepoint.com) or b to go back"
         if (Test-M365ModuleBackSelection -Selection $AdminUrl) {
@@ -440,7 +500,7 @@ function Connect-ModuleSharePointOnline {
         }
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Online.SharePoint.PowerShell" -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Online.SharePoint.PowerShell" -SkipModulePreparation -ConnectCommand {
         Connect-SPOService -Url $AdminUrl
     }
 }
@@ -458,6 +518,10 @@ function Connect-ModuleMicrosoftTeams {
         $UserPrincipalName = $script:DefaultUserPrincipalName
     }
 
+    if (-not (Install-OrUpdateModule -ModuleName "MicrosoftTeams")) {
+        return
+    }
+
     if (-not $AuthenticationMode) {
         $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Teams"
         if ($selectedAuthenticationMode -eq $script:BackSelection) {
@@ -466,7 +530,7 @@ function Connect-ModuleMicrosoftTeams {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "MicrosoftTeams" -ConnectCommand {
+    Connect-ModuleService -ModuleName "MicrosoftTeams" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{}
 
         if ($UserPrincipalName) {
@@ -491,6 +555,10 @@ function Connect-ModulePnP {
         [ValidateSet("Browser", "DeviceCode")]
         [string]$AuthenticationMode
     )
+
+    if (-not (Install-OrUpdateModule -ModuleName "PnP.PowerShell")) {
+        return
+    }
 
     if (-not $SiteUrl) {
         $SiteUrl = Read-Host -Prompt "Enter SharePoint site URL (https://tenant.sharepoint.com/sites/site) or b to go back"
@@ -533,7 +601,7 @@ function Connect-ModulePnP {
     if ($ClientId) { $connectParams.ClientId = $ClientId }
     if ($Tenant) { $connectParams.Tenant = $Tenant }
 
-    Connect-ModuleService -ModuleName "PnP.PowerShell" -ConnectCommand {
+    Connect-ModuleService -ModuleName "PnP.PowerShell" -SkipModulePreparation -ConnectCommand {
         Connect-PnPOnline @connectParams
     }
 }
@@ -547,6 +615,10 @@ function Connect-ModuleEntra {
         [string]$AuthenticationMode
     )
 
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Entra")) {
+        return
+    }
+
     if (-not $AuthenticationMode) {
         $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Microsoft Entra"
         if ($selectedAuthenticationMode -eq $script:BackSelection) {
@@ -555,7 +627,7 @@ function Connect-ModuleEntra {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Entra" -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Entra" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             Scopes = $Scopes
             NoWelcome = $true
@@ -584,6 +656,10 @@ function Connect-ModuleAzure {
         $UserPrincipalName = $script:DefaultUserPrincipalName
     }
 
+    if (-not (Install-OrUpdateModule -ModuleName "Az.Accounts")) {
+        return
+    }
+
     if (-not $AuthenticationMode) {
         $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Azure"
         if ($selectedAuthenticationMode -eq $script:BackSelection) {
@@ -592,7 +668,7 @@ function Connect-ModuleAzure {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Az.Accounts" -ConnectCommand {
+    Connect-ModuleService -ModuleName "Az.Accounts" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{}
         if ($UserPrincipalName) { $connectParams.AccountId = $UserPrincipalName }
         if ($Tenant) { $connectParams.Tenant = $Tenant }
@@ -612,7 +688,11 @@ function Connect-ModulePowerBI {
         [string]$Environment = "Public"
     )
 
-    Connect-ModuleService -ModuleName "MicrosoftPowerBIMgmt" -ConnectCommand {
+    if (-not (Install-OrUpdateModule -ModuleName "MicrosoftPowerBIMgmt")) {
+        return
+    }
+
+    Connect-ModuleService -ModuleName "MicrosoftPowerBIMgmt" -SkipModulePreparation -ConnectCommand {
         Connect-PowerBIServiceAccount -Environment $Environment
     }
 }
@@ -624,7 +704,11 @@ function Connect-ModulePowerPlatform {
         [string]$Endpoint = "prod"
     )
 
-    Connect-ModuleService -ModuleName "Microsoft.PowerApps.Administration.PowerShell" -ConnectCommand {
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.PowerApps.Administration.PowerShell")) {
+        return
+    }
+
+    Connect-ModuleService -ModuleName "Microsoft.PowerApps.Administration.PowerShell" -SkipModulePreparation -ConnectCommand {
         Add-PowerAppsAccount -Endpoint $Endpoint
     }
 }
@@ -642,6 +726,10 @@ function Connect-ModulePurviewCompliance {
         $UserPrincipalName = $script:DefaultUserPrincipalName
     }
 
+    if (-not (Install-OrUpdateModule -ModuleName "ExchangeOnlineManagement")) {
+        return
+    }
+
     if (-not $AuthenticationMode) {
         $selectedAuthenticationMode = Read-ModuleAuthenticationMode -ServiceName "Purview Compliance"
         if ($selectedAuthenticationMode -eq $script:BackSelection) {
@@ -650,7 +738,7 @@ function Connect-ModulePurviewCompliance {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -ConnectCommand {
+    Connect-ModuleService -ModuleName "ExchangeOnlineManagement" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{}
 
         if ($UserPrincipalName) {
