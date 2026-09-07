@@ -16,6 +16,8 @@ M365ModuleSelector is a PowerShell helper module for installing, updating, impor
 - Microsoft Graph Beta
 - Purview Compliance
 
+Microsoft Graph sign-in uses `Microsoft.Graph.Authentication` so the selector does not need to import the full `Microsoft.Graph` rollup module just to connect.
+
 ## Requirements
 
 - PowerShell 7.2 or newer

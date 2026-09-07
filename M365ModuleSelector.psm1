@@ -7,7 +7,7 @@ $script:Banner = @"
 "@
 
 $script:ModuleRequirements = @{
-    "Microsoft.Graph"                        = [version]"7.0"
+    "Microsoft.Graph.Authentication"         = [version]"7.0"
     "ExchangeOnlineManagement"               = [version]"5.1"
     "Microsoft.Online.SharePoint.PowerShell" = [version]"5.1"
     "MicrosoftTeams"                         = [version]"5.1"
@@ -343,7 +343,7 @@ function Connect-ModuleMicrosoftGraph {
         [string]$AuthenticationMode
     )
 
-    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph")) {
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph.Authentication")) {
         return
     }
 
@@ -369,7 +369,7 @@ function Connect-ModuleMicrosoftGraph {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Graph" -SkipModulePreparation -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Graph.Authentication" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             Scopes = $Scopes
             NoWelcome = $true
@@ -397,7 +397,7 @@ function Connect-ModuleMicrosoftGraphBeta {
         [string]$AuthenticationMode
     )
 
-    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph.Beta")) {
+    if (-not (Install-OrUpdateModule -ModuleName "Microsoft.Graph.Authentication")) {
         return
     }
 
@@ -423,7 +423,7 @@ function Connect-ModuleMicrosoftGraphBeta {
         $AuthenticationMode = $selectedAuthenticationMode
     }
 
-    Connect-ModuleService -ModuleName "Microsoft.Graph.Beta" -SkipModulePreparation -ConnectCommand {
+    Connect-ModuleService -ModuleName "Microsoft.Graph.Authentication" -SkipModulePreparation -ConnectCommand {
         $connectParams = @{
             Scopes = $Scopes
             NoWelcome = $true
@@ -773,7 +773,7 @@ function Connect-M365Module {
         Write-Host $Title
 
         $options = [ordered]@{
-            "1" = @{ Name = "Microsoft Graph"; Module = "Microsoft.Graph" }
+            "1" = @{ Name = "Microsoft Graph"; Module = "Microsoft.Graph.Authentication" }
             "2" = @{ Name = "Exchange Online"; Module = "ExchangeOnlineManagement" }
             "3" = @{ Name = "SharePoint Online"; Module = "Microsoft.Online.SharePoint.PowerShell" }
             "4" = @{ Name = "Microsoft Teams"; Module = "MicrosoftTeams" }
