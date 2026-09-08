@@ -784,7 +784,7 @@ function Connect-M365Module {
             "9" = @{ Name = "Power Platform"; Module = "Microsoft.PowerApps.Administration.PowerShell" }
             "10" = @{ Name = "Microsoft Graph Beta"; Module = "Microsoft.Graph.Beta" }
             "11" = @{ Name = "Purview Compliance"; Module = "ExchangeOnlineManagement" }
-            "q" = "Quit"
+            "q" = "Return to shell"
         }
 
         foreach ($option in $options.GetEnumerator()) {
@@ -797,7 +797,7 @@ function Connect-M365Module {
             }
         }
 
-        $selection = Read-Host "Enter your choice (1-11 or q)"
+        $selection = Read-Host "Enter your choice (1-11 or q to return to shell)"
 
         switch ($selection.ToLowerInvariant()) {
             "1" { Connect-ModuleMicrosoftGraph }
@@ -812,7 +812,7 @@ function Connect-M365Module {
             "10" { Connect-ModuleMicrosoftGraphBeta }
             "11" { Connect-ModulePurviewCompliance -UserPrincipalName $UserPrincipalName }
             "q" {
-                Write-Host "Exiting..."
+                Write-Host "Returning to shell..."
                 return
             }
             default {
