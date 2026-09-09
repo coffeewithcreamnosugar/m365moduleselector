@@ -44,6 +44,7 @@ $script:CommonGraphScopes = [ordered]@{
 $script:DefaultUserPrincipalName = $null
 $script:DefaultUserPrincipalNamePrompted = $false
 $script:BackSelection = "__M365MODULESELECTOR_BACK__"
+$script:AvailableModuleVersionCache = @{}
 
 function Test-ModuleInstalled {
     [CmdletBinding()]
@@ -80,12 +81,20 @@ function Get-AvailableModuleVersion {
         [string]$ModuleName
     )
 
+    if ($script:AvailableModuleVersionCache.ContainsKey($ModuleName)) {
+        Write-Host "Using cached PowerShell Gallery version for $ModuleName."
+        return $script:AvailableModuleVersionCache[$ModuleName]
+    }
+
     try {
         $module = Find-Module -Name $ModuleName -ErrorAction Stop
-        return [version]$module.Version
+        $version = [version]$module.Version
+        $script:AvailableModuleVersionCache[$ModuleName] = $version
+        return $version
     }
     catch {
         Write-Warning "Could not check the PowerShell Gallery for '$ModuleName': $($_.Exception.Message)"
+        $script:AvailableModuleVersionCache[$ModuleName] = $null
         return $null
     }
 }
@@ -120,6 +129,27 @@ function Test-M365ModuleCloudProviderError {
     return ($Message -match '0x8007016A' -or $Message -match 'cloud file provider is not running')
 }
 
+function Invoke-M365TimedStep {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Activity,
+
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ScriptBlock
+    )
+
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    try {
+        & $ScriptBlock
+    }
+    finally {
+        $stopwatch.Stop()
+        Write-Host ("[timing] {0}: {1:N2}s" -f $Activity, $stopwatch.Elapsed.TotalSeconds) -ForegroundColor DarkGray
+    }
+}
+
 function Install-OrUpdateModule {
     [CmdletBinding()]
     param (
@@ -130,17 +160,25 @@ function Install-OrUpdateModule {
         [string]$Scope = "CurrentUser"
     )
 
-    if (-not (Test-PowerShellVersionForModule -ModuleName $ModuleName)) {
+    if (-not (Invoke-M365TimedStep -Activity "Check PowerShell version for $ModuleName" -ScriptBlock {
+        Test-PowerShellVersionForModule -ModuleName $ModuleName
+    })) {
         return $false
     }
 
-    $installedVersion = Get-InstalledModuleVersion -ModuleName $ModuleName
-    $availableVersion = Get-AvailableModuleVersion -ModuleName $ModuleName
+    $installedVersion = Invoke-M365TimedStep -Activity "Find installed $ModuleName version" -ScriptBlock {
+        Get-InstalledModuleVersion -ModuleName $ModuleName
+    }
+    $availableVersion = Invoke-M365TimedStep -Activity "Check PowerShell Gallery for $ModuleName" -ScriptBlock {
+        Get-AvailableModuleVersion -ModuleName $ModuleName
+    }
 
     try {
         if ($installedVersion -eq [version]"0.0.0.0") {
             Write-Host "$ModuleName is not installed. Installing to $Scope..."
-            Install-Module -Name $ModuleName -Scope $Scope -Force -AllowClobber -ErrorAction Stop
+            Invoke-M365TimedStep -Activity "Install $ModuleName" -ScriptBlock {
+                Install-Module -Name $ModuleName -Scope $Scope -Force -AllowClobber -ErrorAction Stop
+            }
         }
         elseif ($availableVersion -and $availableVersion -gt $installedVersion) {
             Write-Host "A newer version of $ModuleName is available: $installedVersion -> $availableVersion."
@@ -148,12 +186,16 @@ function Install-OrUpdateModule {
 
             if ($update -match '^(Y|y)') {
                 try {
-                    Update-Module -Name $ModuleName -Force -ErrorAction Stop
+                    Invoke-M365TimedStep -Activity "Update $ModuleName" -ScriptBlock {
+                        Update-Module -Name $ModuleName -Force -ErrorAction Stop
+                    }
                 }
                 catch {
                     if ($_.Exception.Message -match 'was not installed by using Install-Module') {
                         Write-Warning "$ModuleName cannot be updated with Update-Module because it was not installed from PowerShell Gallery. Installing the latest version to $Scope instead..."
-                        Install-Module -Name $ModuleName -Scope $Scope -Force -AllowClobber -ErrorAction Stop
+                        Invoke-M365TimedStep -Activity "Install latest $ModuleName" -ScriptBlock {
+                            Install-Module -Name $ModuleName -Scope $Scope -Force -AllowClobber -ErrorAction Stop
+                        }
                     }
                     else {
                         throw
@@ -165,7 +207,15 @@ function Install-OrUpdateModule {
             Write-Host "$ModuleName is installed (version $installedVersion)."
         }
 
-        Import-Module -Name $ModuleName -ErrorAction Stop
+        $loadedModule = Get-Module -Name $ModuleName
+        if ($loadedModule) {
+            Write-Host "$ModuleName is already loaded (version $($loadedModule.Version))."
+        }
+        else {
+            Invoke-M365TimedStep -Activity "Import $ModuleName" -ScriptBlock {
+                Import-Module -Name $ModuleName -ErrorAction Stop
+            }
+        }
         return $true
     }
     catch {
@@ -198,7 +248,9 @@ function Connect-ModuleService {
     }
 
     try {
-        & $ConnectCommand
+        Invoke-M365TimedStep -Activity "Run $ModuleName connection command" -ScriptBlock {
+            & $ConnectCommand
+        }
         Write-Host "Connected using $ModuleName."
     }
     catch {
